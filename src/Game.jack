@@ -1,0 +1,356 @@
+class Game {
+    field Snake snake1, snake2;
+    field Food food;
+    field int score1, score2;
+    field boolean exit, gameOver;
+    field int losingPlayer;
+
+    // Constructor: initializes game objects and variables
+    constructor Game new() {
+            let snake1 = Snake.new(50, 50, true);
+            let snake2 = Snake.new(450, 170, false);
+            let food = Food.new();
+            let score1 = 0;
+            let score2 = 0;
+            let exit = false;
+            let gameOver = false;
+            let losingPlayer = 0;
+            return this;
+    }
+
+    // Main game loop
+    method void run() {
+        let exit = false;
+        while (~exit) {
+            do displayStartScreen();
+            if (~exit) {
+                do gameLoop();
+                if (gameOver) {
+                    do showGameOver();
+                    let exit = true;
+                }
+            }
+        }
+        return;
+    }
+
+    // Displays the start screen
+    method void displayStartScreen() {
+        var String line1, line2, line3, line4, line5, line6, line7;
+        do Screen.clearScreen();
+
+        let line1 = "Welcome to Clash Of Snakes!";
+        let line2 = "The Ultimate Two-Player Snake Game!";
+        let line3 = "First player to 20 points wins!";
+        let line4 = "Player 1 (Arrows) - Starting Position: Top Left";
+        let line5 = "Player 2 (W A S D) - Starting Position: Bottom Right";
+        let line6 = "Press ENTER to Start or Press ESC to Quit";
+        let line7 = "Created by: Tomer Vaener and Edan Ziv ";
+
+        do centerText(3, line1);
+        do centerText(5, line2);
+        do centerText(9, line3);
+        do centerText(12, line4);
+        do centerText(14, line5);
+        do centerText(17, line6);
+        do centerText(20, line7);
+
+        do waitForStart();
+        return;
+    }
+
+    // Waits for the player to start or quit the game
+    method void waitForStart() {
+        var char key;
+        var boolean started;
+
+        let started = false;
+        while ((~started) & (~exit)) {
+            let key = Keyboard.keyPressed();
+
+            if (key = 140) { let exit = true; }     // ESC
+            if (key = 128) { let started = true; }  // ENTER
+
+            do Sys.wait(50);
+        }
+
+        while (Keyboard.keyPressed() > 0) {
+            do Sys.wait(50);
+        }
+        return;
+    }
+
+    // Main game loop
+    method void gameLoop() {
+        var char key;
+        var int moveCount;
+        var int currentFoodX, currentFoodY;
+        var boolean needRedraw;
+
+        let moveCount = 0;
+        let exit = false;
+        let gameOver = false;
+        let needRedraw = false;
+
+        do Screen.setColor(false);
+        do Screen.drawRectangle(0, 0, 511, 239);
+
+        do snake1.draw();
+        do snake2.draw();
+        do food.draw();
+        do drawScores();
+
+        // Game loop
+        while ((~gameOver) & (~exit)) {
+            let key = Keyboard.keyPressed();
+
+            // Handle player input
+            if (key > 0) {
+                if (key = 140) { let exit = true; }     // ESC
+
+                // Player 1 - Arrow keys
+                if (key = 131) { do snake1.setDirection(1); }  // Up
+                if (key = 133) { do snake1.setDirection(2); }  // Down
+                if (key = 130) { do snake1.setDirection(3); }  // Left
+                if (key = 132) { do snake1.setDirection(4); }  // Right
+
+                // Player 2 - wasd
+                if (key = 119) { do snake2.setDirection(1); }  // w
+                if (key = 115) { do snake2.setDirection(2); }  // s
+                if (key = 97)  { do snake2.setDirection(3); }  // a
+                if (key = 100) { do snake2.setDirection(4); }  // d
+            }
+
+            let moveCount = moveCount + 1;
+            if (moveCount > 3) {
+                let moveCount = 0;
+
+                // Check food collisions
+                if (~gameOver) {
+                    let currentFoodX = food.getX();
+                    let currentFoodY = food.getY();
+
+                    if (snake1.checkFoodCollision(currentFoodX, currentFoodY)) {
+                        if (score1 < 20) {
+                            do snake1.grow();
+                            let score1 = score1 + 1;
+                            if (score1 = 20) {
+                                let gameOver = true;
+                                let losingPlayer = 2;
+                            }
+                            let needRedraw = true;
+                        }
+                    }
+                    if (snake2.checkFoodCollision(currentFoodX, currentFoodY)) {
+                        if (score2 < 20) {
+                            do snake2.grow();
+                            let score2 = score2 + 1;
+                            if (score2 = 20) {
+                                let gameOver = true;
+                                let losingPlayer = 1;
+                            }
+                            let needRedraw = true;
+                        }
+                    }
+                }
+
+                // Move snake1 and check collisions
+                if (snake1.hasDirection()) {
+                    do snake1.move();
+                    if (checkCollisions(snake1, snake2)) {
+                        let gameOver = true;
+                        if (snake1.checkHeadToHeadCollision(snake2)) {
+                            if (score1 = score2) {
+                                let losingPlayer = 0;  // Draw
+                            } else {
+                                if (score1 > score2) {
+                                    let losingPlayer = 2;
+                                } else {
+                                    let losingPlayer = 1;
+                                }
+                            }
+                        } else {
+                            let losingPlayer = 1;
+                        }
+                    }
+                }
+
+                // Move snake2 and check collisions
+                if ((~gameOver) & snake2.hasDirection()) {
+                    do snake2.move();
+                    if (checkCollisions(snake2, snake1)) {
+                        let gameOver = true;
+                        if (snake2.checkHeadToHeadCollision(snake1)) {
+                            if (score1 = score2) {
+                                let losingPlayer = 0;  // Draw
+                            } else {
+                                if (score1 > score2) {
+                                    let losingPlayer = 2;
+                                } else {
+                                    let losingPlayer = 1;
+                                }
+                            }
+                        } else {
+                            let losingPlayer = 2;
+                        }
+                    }
+                }
+
+                // Redraw the screen if food was eaten. Done it for a better animation, otherwise it's not looking good.
+                if (needRedraw) {
+                    do Screen.setColor(false);
+                    do Screen.drawRectangle(0, 0, 511, 239);
+                    do snake1.draw();
+                    do snake2.draw();
+                    do food.updatePosition(snake1, snake2);
+                    do food.draw();
+                    do drawScores();
+                    let needRedraw = false;
+                }
+            }
+            do Sys.wait(10);
+        }
+        return;
+    }
+
+    // Checks collisions for a snake
+    method boolean checkCollisions(Snake current, Snake other) {
+        if (current.checkWallCollision()) { return true; }
+        if (current.checkSelfCollision()) { return true; }
+        if (current.checkSnakeCollision(other)) { return true; }
+        if (current.checkHeadToHeadCollision(other)) { return true; }
+        return false;
+    }
+
+    // Draws the scores on the screen
+    method void drawScores() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(0, 239, 511, 239); // Bottom
+        do Output.moveCursor(22, 5);
+        do Output.printString("Player 1: ");
+        do Output.printInt(score1);
+
+        do Output.moveCursor(22, 45);
+        do Output.printString("Player 2: ");
+        do Output.printInt(score2);
+        return;
+    }
+
+    // Displays the game over screen
+    method void showGameOver() {
+        var String line;            // For "GAME OVER!"
+        var String resultLine;      // For "IT'S A DRAW!" or "Player X WINS!"
+        var String perfectLine;     // For "Perfect Score: 20 points!"
+        var String collisionLine;   // Explaining how the other player lost
+        var String finalScoresLine; // "Final Scores:"
+        var String p1String, p2String;
+        var int col;
+
+        do Screen.clearScreen();
+
+        let line = "GAME OVER!";
+        do centerText(4, line);
+
+        // Handle draw scenario
+        if (losingPlayer = 0) {
+            let resultLine = "IT'S A DRAW!";
+            do centerText(6, resultLine);
+            let collisionLine = "Head to Head collision!";
+            do centerText(8, collisionLine);
+        } 
+
+        // Handle player 1 win scenario
+        if (losingPlayer = 2) {
+            let resultLine = "Player 1 WINS!";
+            do centerText(6, resultLine);
+
+            if (score1 = 20) {
+                let perfectLine = "Perfect Score: 20 points!";
+                do centerText(8, perfectLine);
+            } else {
+                if (snake2.checkWallCollision()) {
+                    let collisionLine = "Player 2 hit the wall!";
+                } else { 
+                    if (snake2.checkSelfCollision()) {
+                        let collisionLine = "Player 2 crashed into itself!";
+                    } else { 
+                        if (snake1.checkHeadToHeadCollision(snake2)) {
+                            let collisionLine = "Head to Head collision!";
+                        } else {
+                            let collisionLine = "Player 2 crashed into Player 1!";
+                        }
+                    }
+                }
+                do centerText(8, collisionLine);
+            }
+        } else { 
+            // Handle player 2 win scenario
+            if (losingPlayer = 1) {
+                let resultLine = "Player 2 WINS!";
+                do centerText(6, resultLine);
+
+                if (score2 = 20) {
+                    let perfectLine = "Perfect Score: 20 points!";
+                    do centerText(8, perfectLine);
+                } else {
+                    if (snake1.checkWallCollision()) {
+                        let collisionLine = "Player 1 hit the wall!";
+                    } else { 
+                        if (snake1.checkSelfCollision()) {
+                            let collisionLine = "Player 1 crashed into itself!";
+                        } else { 
+                            if (snake1.checkHeadToHeadCollision(snake2)) {
+                                let collisionLine = "Head to Head collision!";
+                            } else {
+                                let collisionLine = "Player 1 crashed into Player 2!";
+                            }
+                        }
+                    }
+                    do centerText(8, collisionLine);
+                }
+            }
+        }
+
+        let finalScoresLine = "Final Scores:";
+        do centerText(11, finalScoresLine);
+
+        // Display player 1 score
+        let p1String = "Player 1: ";
+        do centerText(13, p1String);
+
+        let col = (64 - p1String.length()) / 2;
+        let col = col + p1String.length();  // move right after the text
+        do Output.moveCursor(13, col);
+        do Output.printInt(score1);
+
+        // Display player 2 score
+        let p2String = "Player 2: ";
+        do centerText(15, p2String);
+
+        let col = (64 - p2String.length()) / 2;
+        let col = col + p2String.length();
+        do Output.moveCursor(15, col);
+        do Output.printInt(score2);
+
+        return;
+    }
+
+    // Centers text on the screen
+    method void centerText(int r, String text) {
+        var int col;
+        let col = (64 - text.length()) / 2;
+        if (col < 0) { let col = 0; }
+        do Output.moveCursor(r, col);
+        do Output.printString(text);
+        return;
+    }
+
+    // Disposes game objects and frees memory
+    method void dispose() {
+        do snake1.dispose();
+        do snake2.dispose();
+        do food.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

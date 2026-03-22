@@ -1,0 +1,279 @@
+class Snake {
+    // Arrays to store snake body coordinates
+    field Array bodyX, bodyY;
+    // length: current snake length, direction: current movement, lastMoved: previous direction
+    field int length, direction, lastMoved;
+    // size: size of each snake segment
+    field int size;
+    // True for rectangular snake (P1), false for circular snake (P2)
+    field boolean isPlayer1;
+    // Maximum possible length of snake
+    static int maxLength;
+
+    // Initialize maximum snake length
+    function void init() {
+        let maxLength = 30;
+        return;
+    }
+
+    // Create new snake with starting position and type
+    constructor Snake new(int startX, int startY, boolean firstPlayer) {
+        let bodyX = Array.new(maxLength);
+        let bodyY = Array.new(maxLength);
+        let length = 1;
+        let direction = 0;     // 0: no movement, 1: up, 2: down, 3: left, 4: right
+        let lastMoved = 0;
+        let size = 10;
+        let isPlayer1 = firstPlayer;
+        
+        let bodyX[0] = startX;
+        let bodyY[0] = startY;
+        
+        return this;
+    }
+
+    // Handle snake movement, wall collisions, and redrawing
+    method void move() {
+        var int headX, headY;
+        let headX = bodyX[0];
+        let headY = bodyY[0];
+        
+        // Clear current position before moving
+        do clear();
+        
+        // Move snake based on direction
+        if (direction = 1) { do moveBody(headX, headY - size); }     // Up
+        if (direction = 2) { do moveBody(headX, headY + size); }     // Down
+        if (direction = 3) { do moveBody(headX - size, headY); }     // Left
+        if (direction = 4) { do moveBody(headX + size, headY); }     // Right 
+        
+        do draw();
+        let lastMoved = direction;
+        return;
+    }
+
+    // Clear snake from screen before moving
+    method void clear() {
+        var int i, x, y;
+        do Screen.setColor(false);
+        
+        let i = 0;
+        while (i < length) {
+            let x = bodyX[i];
+            let y = bodyY[i];
+            // Different clear areas for rectangular and circular segments
+            if (isPlayer1) {
+                do Screen.drawRectangle(x, y, x + size, y + size);
+            } else {
+                do Screen.drawRectangle(x - 1, y - 1, x + size + 1, y + size + 1);
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    // Update positions of all body segments
+    method void moveBody(int newX, int newY) {
+        var int i;
+        // Move each segment to position of segment in front of it
+        let i = length - 1;
+        while (i > 0) {
+            let bodyX[i] = bodyX[i-1];
+            let bodyY[i] = bodyY[i-1];
+            let i = i - 1;
+        }
+        // Update head position
+        let bodyX[0] = newX;
+        let bodyY[0] = newY;
+        return;
+    }
+
+    // Draw complete snake with head and body segments
+    method void draw() {
+        var int i, x, y;
+        do Screen.setColor(true);
+        
+        let i = 0;
+        while (i < length) {
+            let x = bodyX[i];
+            let y = bodyY[i];
+            
+            if (i = 0) {  // Draw head
+                if (isPlayer1) {
+                    do Screen.drawRectangle(x, y, x + size - 1, y + size - 1);
+                } else {
+                    do Screen.drawCircle(x+(size/2), y+(size/2), 5);
+                }
+                
+                do drawEyes(x, y);
+            } else {      // Draw body segments
+                if (isPlayer1) {
+                    do Screen.drawRectangle(x + 1, y + 1, x + size - 2, y + size - 2);
+                } else {
+                    do Screen.drawCircle(x+(size/2), y+(size/2), 4);
+                }
+            }
+            let i = i + 1;
+        }
+        return;
+    }
+
+    // Draw snake eyes based on direction
+    method void drawEyes(int x, int y) {
+        do Screen.setColor(false);
+        if (direction = 0) {          // Default direction
+            if (isPlayer1) {
+                do Screen.drawPixel(x + 7, y + 3);
+                do Screen.drawPixel(x + 7, y + 7);
+            } else {
+                do Screen.drawPixel(x + 3, y + 3);
+                do Screen.drawPixel(x + 3, y + 7);
+            }
+        } else {
+            if (direction = 1) {      // Up
+                do Screen.drawPixel(x + 3, y + 3);
+                do Screen.drawPixel(x + 7, y + 3);
+            }
+            if (direction = 2) {      // Down
+                do Screen.drawPixel(x + 3, y + 7);
+                do Screen.drawPixel(x + 7, y + 7);
+            }
+            if (direction = 3) {      // Left
+                do Screen.drawPixel(x + 3, y + 3);
+                do Screen.drawPixel(x + 3, y + 7);
+            }
+            if (direction = 4) {      // Right
+                do Screen.drawPixel(x + 7, y + 3);
+                do Screen.drawPixel(x + 7, y + 7);
+            }
+        }
+        do Screen.setColor(true);
+        return;
+    }
+
+    // Add new segment to snake's tail
+    method void grow() {
+        if (length < (maxLength - 2)) {
+            let bodyX[length] = bodyX[length-1];
+            let bodyY[length] = bodyY[length-1];
+            let length = length + 1;
+        }
+        return;
+    }
+
+    // Update snake direction, preventing 180-degree turns
+    method void setDirection(int newDir) {
+        if ((lastMoved = 1) & (newDir = 2)) { return; }  // No up->down
+        if ((lastMoved = 2) & (newDir = 1)) { return; }  // No down->up
+        if ((lastMoved = 3) & (newDir = 4)) { return; }  // No left->right
+        if ((lastMoved = 4) & (newDir = 3)) { return; }  // No right->left
+        
+        let direction = newDir;
+        return;
+    }
+
+    // Check if snake's head touches food
+    method boolean checkFoodCollision(int foodX, int foodY) {
+        var int headX, headY;
+        let headX = bodyX[0];
+        let headY = bodyY[0];
+        
+        return ((Math.abs(headX - foodX) < size) & 
+                (Math.abs(headY - foodY) < size));
+    }
+
+    // Check if snake collides with itself (after 3rd segment)
+    method boolean checkSelfCollision() {
+        var int i, headX, headY;
+        let headX = bodyX[0];
+        let headY = bodyY[0];
+        
+        let i = 3;
+        while (i < length) {
+            if ((Math.abs(headX - bodyX[i]) < size) & 
+                (Math.abs(headY - bodyY[i]) < size)) {
+                return true;
+            }
+            let i = i + 1;
+        }
+        return false;
+    }
+
+    // Check if snake hits screen boundaries
+    method boolean checkWallCollision() {
+        var int headX, headY;
+        let headX = bodyX[0];
+        let headY = bodyY[0];
+        
+        if (headX < 1) { return true; }                // Left wall
+        if ((headX + size) > 509) { return true; }     // Right wall
+        if (headY < 1) { return true; }                // Top wall
+        if ((headY + size) > 238) { return true; }     // Bottom wall (adjusted for score)
+        
+        return false;
+    }
+
+    // Check if snake collides with other snake
+    method boolean checkSnakeCollision(Snake other) {
+        var int i, headX, headY;
+        var Array otherX, otherY;
+        var int otherLen;
+        
+        let headX = bodyX[0];
+        let headY = bodyY[0];
+        let otherX = other.getBodyX();
+        let otherY = other.getBodyY();
+        let otherLen = other.getLength();
+        
+        let i = 0;
+        while (i < otherLen) {
+            if ((Math.abs(headX - otherX[i]) < size) & 
+                (Math.abs(headY - otherY[i]) < size)) {
+                return true;
+            }
+            let i = i + 1;
+        }
+        return false;
+    }
+
+    method boolean checkHeadToHeadCollision(Snake other) {
+        var int head1X, head1Y, head2X, head2Y;
+        let head1X = bodyX[0];
+        let head1Y = bodyY[0];
+        let head2X = other.getHeadX();
+        let head2Y = other.getHeadY();
+        
+        return ((Math.abs(head1X - head2X) < 10) & 
+                (Math.abs(head1Y - head2Y) < 10));
+    }
+
+    // Check if given position overlaps with any snake segment
+    method boolean isPositionOccupied(int x, int y) {
+        var int i;
+        let i = 0;
+        while (i < length) {
+            if ((x = bodyX[i]) & (y = bodyY[i])) {
+                return true;
+            }
+            let i = i + 1;
+        }
+        return false;
+    }
+
+    // Free allocated memory
+    method void dispose() {
+        do bodyX.dispose();
+        do bodyY.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    // Getter methods
+    method Array getBodyX() { return bodyX; }
+    method Array getBodyY() { return bodyY; }
+    method int getLength() { return length; }
+    method boolean hasDirection() { return ~(direction = 0); }
+    method int getDirection() { return direction; }
+    method int getHeadX() { return bodyX[0]; }
+    method int getHeadY() { return bodyY[0]; }
+}

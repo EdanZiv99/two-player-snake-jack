@@ -1,0 +1,46 @@
+function Random.rand 0
+    push static 0
+    push constant 17
+    call Math.multiply 2
+    push constant 7919
+    add
+    push constant 32767
+    and
+    pop static 0
+    push static 0
+    return
+function Random.randRange 2
+    push constant 1
+    pop local 0
+label Random_0
+    push local 0
+    push argument 0
+    lt
+    not
+    if-goto Random_1
+    push local 0
+    push constant 2
+    call Math.multiply 2
+    push constant 1
+    add
+    pop local 0
+    goto Random_0
+label Random_1
+    call Random.rand 0
+    push local 0
+    and
+    pop local 1
+label Random_2
+    push local 1
+    push argument 0
+    gt
+    not
+    if-goto Random_3
+    call Random.rand 0
+    push local 0
+    and
+    pop local 1
+    goto Random_2
+label Random_3
+    push local 1
+    return

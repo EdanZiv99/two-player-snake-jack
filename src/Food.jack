@@ -1,0 +1,66 @@
+class Food {
+    field int x, y;
+    field int size;
+
+    constructor Food new() {
+        let size = 10;
+        let x = 250;  // Center of screen
+        let y = 120;
+        return this;
+    }
+
+    // Generates new food position avoiding snake bodies
+    method void updatePosition(Snake snake1, Snake snake2) {
+        var int newX, newY;
+        var boolean validPosition;
+        var int attempts;
+        
+        let attempts = 0;
+        let validPosition = false;
+        
+        while ((~validPosition) & (attempts < 100)) {
+            let newX = (Random.randRange(49) * 10);
+            let newY = (Random.randRange(22) * 10);
+            
+            if ((newX > 0) & (newX < 490) & (newY > 0) & (newY < 220)) {
+                if ((~(snake1.isPositionOccupied(newX, newY))) & 
+                    (~(snake2.isPositionOccupied(newX, newY)))) {
+                    let x = newX;
+                    let y = newY;
+                    let validPosition = true;
+                }
+            }
+            let attempts = attempts + 1;
+        }
+        
+        if (~validPosition) {
+            let x = 250;
+            let y = 120;
+        }
+        return;
+    }
+
+    // Draw food on screen
+    method void draw() {
+        do Screen.setColor(true);
+        do Screen.drawCircle(x + 5, y + 5, 4);  // Food body
+        do Screen.setColor(false);
+        do Screen.drawCircle(x + 5, y + 5, 1);  // Food core
+        return;
+    }
+
+    // Clear food from screen
+    method void clear() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y, x + size, y + size);
+        return;
+    }
+
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    method int getX() { return x; }
+    method int getY() { return y; }
+}

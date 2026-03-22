@@ -1,0 +1,28 @@
+class Random {
+    // Current random number state
+    static int seed;
+    
+    // Generate next random number (0 to 32767)
+    function int rand() {
+        let seed = (seed * 17 + 7919) & 32767;
+        return seed;
+    }
+    
+    // Generate random number within range (0 to range)
+    function int randRange(int range) {
+        var int boundary;
+        var int number;
+        
+        let boundary = 1;
+        while (boundary < range) {
+            let boundary = boundary * 2 + 1;
+        }
+        
+        // Get random number and ensure it's within range
+        let number = Random.rand() & boundary;
+        while (number > range) {
+            let number = Random.rand() & boundary;
+        }
+        return number;
+    }
+}
