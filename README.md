@@ -79,7 +79,7 @@ vm/
 
 See the gameplay demo in:
 
-Two_Players_Snake_Game_Demo.mp4
+Demo.mp4
 
 ---
 
